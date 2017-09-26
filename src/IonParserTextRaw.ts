@@ -515,18 +515,29 @@ export class ParserTextRaw {
     }
   }
 
-  private _read_value_helper_plus( ch1, accept_operator_symbols: boolean, calling_op ) {
-    var ch2 = this._peek("inf");
-    this._unread(ch1); // in any case we'll leave this character for the next function to use
-    if (ch2 != ERROR) {
-      this._ops.unshift( this._read_plus_inf );
+  private _read_value_helper_plus = function( ch1, accept_operator_symbols: boolean, calling_op ) {
+    var op = undefined,
+        ch2 = this._peek();
+    if (ch2 == CH_i) {
+      ch2 = this._peek("inf");
+
+      if (!IonText.is_letter_or_digit(ch2)) {
+          console.log("not letter or digit: " + ch2);
+        op =  this._read_plus_inf;
+      }
+      else if (accept_operator_symbols) {
+        op = this._read_operator_symbol;
+      }
     }
     else if (accept_operator_symbols) {
-      this._ops.unshift( this._read_operator_symbol );
+      op = this._read_operator_symbol;
+    }
+    if (op != undefined) {
+      this._ops.unshift( op );
+      this._unread(ch1);
     }
     else {
-      this._read(); // get the cursor pointed to the offending character
-      this._error("unexpected '+'");
+      this._error("operator symbols are not valid outside of sexp's");
     }
   }
 
@@ -535,7 +546,7 @@ export class ParserTextRaw {
         ch2 = this._peek();
     if (ch2 == CH_i) {
       ch2 = this._peek("inf");
-      if (IonText.is_numeric_terminator(ch2)) {
+      if (!IonText.is_letter_or_digit(ch2)) {
         op =  this._read_minus_inf;
       }
       else if (accept_operator_symbols) {
@@ -750,21 +761,25 @@ export class ParserTextRaw {
       }
       ch = this._read_optional_time(ch);  // no time unless you at least include month - TODO really !?
     }
-    ch = this._read_optional_time_offset(ch); // we only allow an offset
-    if (this._raw || IonText.is_numeric_terminator(ch)) {
-      this._unread(ch);
-      this._end = this._in.position();
-      this._value_push( T_TIMESTAMP );
-    }
-    else {
-      this._error( "invalid character after timestamp" );
+    if (ch === ERROR) {
+      this._error( "Invalid 'time' portion of timestamp" );
+    } else {
+      ch = this._read_optional_time_offset(ch); // we only allow an offset
+      if (this._raw || IonText.is_numeric_terminator(ch)) {
+        this._unread(ch);
+        this._end = this._in.position();
+        this._value_push( T_TIMESTAMP );
+      }
+      else {
+        this._error( "invalid character after timestamp" );
+      }
     }
   }
 
   private _read_optional_time(ch: number) : number {
     if (ch != CH_T) return ch; // no 'T", no time
     ch = this._read();
-    if (!IonText.is_numeric_terminator(ch)) {
+    if (IonText.is_digit(ch)) {
       // then it has to be, at least hours and minutes
       ch = this._read_hours_and_minutes(ch);
       if (ch == CH_CL) {

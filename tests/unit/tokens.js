@@ -41,10 +41,16 @@ define(
 
         function test_token(type, str, exp) {
             if (exp === undefined) exp = str;
-            var parser = make_parser(str);
-            next(parser, type, exp);
-            assert.equal(parser.get_raw_token(), str);
-            assert.equal(parser.next(), -1);
+            try {
+                var parser = make_parser(str);
+                next(parser, type, exp);
+                assert.equal(parser.get_raw_token(), str);
+                assert.equal(parser.next(), -1);
+            } catch (ex) {
+                if (exp != "EXCEPTION") {
+                    throw ex;
+                }
+            }
         }
 
         function test_null(s) {
@@ -62,8 +68,8 @@ define(
         function test_float(s) {
             test_token(ion.IonTypes.FLOAT, s);
         }
-        function test_timestamp(s) {
-            test_token(ion.IonTypes.TIMESTAMP, s);
+        function test_timestamp(s, ex) {
+            test_token(ion.IonTypes.TIMESTAMP, s, ex);
         }
         function test_symbol(s) {
             test_token(ion.IonTypes.SYMBOL, s);
@@ -120,6 +126,10 @@ define(
 
         suite['timestamp'] = function() {
             test_timestamp("1999-12-25T00:00:00Z");
+            test_timestamp("1999-12-25T00:00:00");
+            test_timestamp("1999-12-25T00:00Z");
+            test_timestamp("1999-12-25T00:00");
+            test_timestamp("1999-12-25T00", "EXCEPTION");
         };
 
         suite['symbol'] = function() {

@@ -91,10 +91,10 @@ export class StringSpan {
   }
 
   unread(ch: number) : void {
-    if (this._pos <= this._start) throw new Error("span error");
+    if (this._pos <= this._start) throw new Error("span error: unread before start");
     this._pos--;
     if (ch < 0) {
-      if (this.is_empty() != true) throw new Error("span error");
+      if (this.is_empty() != true) throw new Error("span error: not empty");
       return;
     }
     // we can only unread across 1 new line
@@ -102,7 +102,7 @@ export class StringSpan {
         this._line_start = this._old_line_start;
         this._line--;
     }
-    if (ch != this.peek()) throw new Error("span error");  // DEBUG
+    if (ch != this.peek()) throw new Error("span error: unexpected character");  // DEBUG
   }
 
   peek() : number {
